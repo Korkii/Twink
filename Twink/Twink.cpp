@@ -7,24 +7,63 @@
 #include <winreg.h>
 #include <libloaderapi.h>
 #include <winbase.h>
+#include <synchapi.h>
 
-
+const int SECONDS_IN_HOUR = 3600;
+const int MILI_MULTIPLIER = 1000;
 const int MAX_PATH_SIZE = 260;
 const char AUTORUNS[46] = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run";
+const char* MUTEXNAME = "visual_studio_haram";
+const LPCSTR WELCOME_WINDOW_TITLE = "Management program is up ( sadly it was developed in visual studio )";
+const LPCSTR WELCOME_WINDOW_TEXT = "Visual Studio made me sad";
+const char* AUTORUN_VALUE_NAME = "Technician";
+
+HANDLE ghMutex;
+
 int ShowPopup() {
 	int msgboxID = MessageBox(
 		NULL,
-		(LPCSTR)"Visual Studio made me sad",
-		(LPCSTR)"top 3 worst programs to exist",
+		WELCOME_WINDOW_TITLE,
+		WELCOME_WINDOW_TEXT,
 		MB_ICONINFORMATION
 	);
 	return msgboxID;
 }
 
+void append_gershaim(CHAR* my_str) {
+	CHAR curr;
+	CHAR prev = my_str[0];
+	int i;
+	for (i = 1; my_str[i - 1] != '\0'; i++) {
+		curr = my_str[i];
+		my_str[i] = prev;
+		prev = curr;
+	}
+	my_str[0] = '"';
+	my_str[i - 1] = '"';
+	my_str[i] = '\0';
+}
+
 
 int main()
 {
-	std::cout << "Hello World!\n";
+	ghMutex = OpenMutexA(MUTEX_ALL_ACCESS, FALSE, MUTEXNAME);
+	if (ghMutex != NULL) {
+		std::cerr << "Already open";
+		return 1;
+	}
+
+	ghMutex = CreateMutexA(
+		NULL,
+		TRUE,
+		MUTEXNAME);
+
+	if (ghMutex == NULL)
+	{
+		printf("CreateMutex error: %d\n", GetLastError());
+		return 1;
+	}
+
 	int msgboxID = ShowPopup();
 
 	HKEY TargetKey;
@@ -36,35 +75,13 @@ int main()
 	CHAR my_str[MAX_PATH_SIZE];
 	LPSTR CurrentPath = my_str; 
 	GetModuleFileNameA(NULL, CurrentPath, MAX_PATH_SIZE);
-	CHAR curr;
-	CHAR prev = my_str[0];
-	int i;
-	for (i = 1; my_str[i - 1] != '\0'; i++) {
-		std::cout << i << std::endl;
-		curr = my_str[i];
-		my_str[i] = prev;
-		prev = curr;
-	}
-	
-	my_str[0] = '"';
-	my_str[i-1] = '"';
-	my_str[i] = '\0';
-	char* check = "yes\0";
-	RegSetValueExA(TargetKey, TEXT("Technician"), 0, REG_SZ, (BYTE*)my_str, MAX_PATH_SIZE);
+	append_gershaim(my_str);
+	RegSetValueExA(TargetKey, TEXT(AUTORUN_VALUE_NAME), 0, REG_SZ, (BYTE*)my_str, MAX_PATH_SIZE);
 
+	Sleep(SECONDS_IN_HOUR * MILI_MULTIPLIER);
+
+	CloseHandle(ghMutex);
 } 
-// Run program: Ctrl + F5 or Debug > Start Without Debugging menu
-// Debug program: F5 or Debug > Start Debugging menu
-
-// Tips for Getting Started: 
-//   1. Use the Solution Explorer window to add/manage files
-//   2. Use the Team Explorer window to connect to source control
-//   3. Use the Output window to see build output and other messages
-//   4. Use the Error List window to view errors
-//   5. Go to Project > Add New Item to create new code files, or Project > Add Existing Item to add existing code files to the project
-//   6. In the future, to open this project again, go to File > Open > Project and select the .sln file
-
-
 
 
 
