@@ -20,6 +20,17 @@ const char* AUTORUN_VALUE_NAME = "Technician";
 
 HANDLE ghMutex;
 
+enum error_code {
+	SUCCESS,
+	ALREADY_OPEN,
+	UNKNOWN,
+};
+
+/*
+Shows the popup
+
+@returns status code
+*/
 int ShowPopup() {
 	int msgboxID = MessageBox(
 		NULL,
@@ -30,6 +41,12 @@ int ShowPopup() {
 	return msgboxID;
 }
 
+
+/*
+Legit appends gershaim.
+
+@param my_str The null terminated string to append garshiaim to
+*/
 void append_gershaim(CHAR* my_str) {
 	CHAR curr;
 	CHAR prev = my_str[0];
@@ -45,33 +62,39 @@ void append_gershaim(CHAR* my_str) {
 }
 
 
-int main()
-{
-	ghMutex = OpenMutexA(MUTEX_ALL_ACCESS, FALSE, MUTEXNAME);
-	if (ghMutex != NULL) {
+/*
+Handles all error types
+
+@param errorCode Error code to take care of
+@return errorcode
+*/
+int handle_errors(error_code errorCode) {
+	switch (errorCode) {
+	case error_code::ALREADY_OPEN:
 		std::cerr << "Already open";
-		return 1;
+		return errorCode;
 	}
 
+	return error_code::UNKNOWN;
+}
+
+
+int main()
+{
+	try {
+	ghMutex = OpenMutexA(MUTEX_ALL_ACCESS, FALSE, MUTEXNAME);
+	if (ghMutex != NULL) {
+		throw error_code::ALREADY_OPEN;
+	}
 	ghMutex = CreateMutexA(
 		NULL,
 		TRUE,
 		MUTEXNAME);
 
-	if (ghMutex == NULL)
-	{
-		printf("CreateMutex error: %d\n", GetLastError());
-		return 1;
-	}
-
 	int msgboxID = ShowPopup();
 
 	HKEY TargetKey;
 	LSTATUS OpenStat = RegOpenKeyA(HKEY_CURRENT_USER, AUTORUNS, &TargetKey);
-	if (TargetKey == NULL) {
-		std::cout << "Failed to create key" << std::endl;
-		return 1;
-	}
 	CHAR my_str[MAX_PATH_SIZE];
 	LPSTR CurrentPath = my_str; 
 	GetModuleFileNameA(NULL, CurrentPath, MAX_PATH_SIZE);
@@ -81,6 +104,12 @@ int main()
 	Sleep(SECONDS_IN_HOUR * MILI_MULTIPLIER);
 
 	CloseHandle(ghMutex);
+	return error_code::SUCCESS;
+	}
+	catch (error_code errorCode) {
+		return handle_errors(errorCode);
+		
+	}
 } 
 
 
