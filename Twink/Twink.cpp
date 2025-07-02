@@ -106,14 +106,18 @@ int main(int argc, char* argv[])
 		}
 
 		CHAR my_str[MAX_PATH_SIZE];
-		LPSTR CurrentPath = my_str; 
+		LPSTR CurrentPath = my_str;
+		// std::string to LPSTR
 		DWORD GetModuleStatus = GetModuleFileNameA(NULL, CurrentPath, MAX_PATH_SIZE);
+		std::string new_str = my_str;
+		new_str = "\"" + new_str + "\"";
+
 		if (GetModuleStatus == NULL) {
 			throw StatusCode::GET_MODULE_FAILED;
 		}
-
-		appendQuotes(my_str);
-		LSTATUS SetStat = RegSetValueExA(TargetKey, AUTORUN_VALUE_NAME, 0, REG_SZ, (BYTE*)my_str, MAX_PATH_SIZE);
+		
+		
+		LSTATUS SetStat = RegSetValueExA(TargetKey, AUTORUN_VALUE_NAME, 0, REG_SZ, (BYTE*)new_str.c_str(), MAX_PATH_SIZE);
 		if (SetStat != ERROR_SUCCESS) {
 			throw StatusCode::REGSET_FAILED;
 		}
