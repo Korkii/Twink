@@ -1,13 +1,7 @@
-// Twink.cpp : This file contains the 'main' function. Program execution begins and ends there.
-//
-
 #include <iostream>
 #include <windows.h>
 #include <winuser.h>
-#include <winreg.h>
-#include <libloaderapi.h>
-#include <winbase.h>
-#include <synchapi.h>
+#include "TwinkExceptions.h"
 
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -20,95 +14,116 @@
 const int SECONDS_IN_HOUR = 3600;
 const int MILI_MULTIPLIER = 1000;
 const int MAX_PATH_SIZE = 260;
-const char AUTORUNS[46] = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run";
-const char* MUTEXNAME = "visual_studio_haram";
-const LPCSTR WELCOME_WINDOW_TITLE = "Management program is up ( sadly it was developed in visual studio )";
-const LPCSTR WELCOME_WINDOW_TEXT = "Visual Studio made me sad";
+const char* AUTORUNS = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run";
+const char* MUTEXNAME = "visual_studio_good";
+LPCSTR WELCOME_WINDOW_TITLE = "Management program is up (  it was developed in visual studio happily )";
+LPCSTR WELCOME_WINDOW_TEXT = "Visual Studio made me sad";
 const char* AUTORUN_VALUE_NAME = "Technician";
 
-HANDLE ghMutex;
+HANDLE g_hMutex;
+BOOL closeStatus;
 
-enum error_code {
-	SUCCESS,
-	ALREADY_OPEN,
-	UNKNOWN,
+enum class StatusCode {
+	STATUS_SUCCESS,
+	STATUS_ERROR,
 };
 
-/*
-Shows the popup
 
-@returns status code
+/*
+@brief created a named mutex and makes sure none exist
 */
-int ShowPopup() {
+void createSingleMutex() {
+	g_hMutex = OpenMutexA(SYNCHRONIZE, FALSE, MUTEXNAME);
+	if (g_hMutex != NULL) {
+		throw AlreadyRunningException();
+	}
+	g_hMutex = CreateMutexA(
+		NULL,
+		TRUE,
+		MUTEXNAME);
+
+	if (g_hMutex == NULL) {
+		throw CreateMutexException();
+	}
+
+	closeStatus = NULL;
+}
+
+
+/*
+@brief pops a message for the user
+*/
+void userMessageStage() {
 	int msgboxID = MessageBox(
 		NULL,
 		WELCOME_WINDOW_TITLE,
 		WELCOME_WINDOW_TEXT,
 		MB_ICONINFORMATION
 	);
-	return msgboxID;
+	if (msgboxID == NULL) {
+		throw PopupException();
+	}
 }
 
 
 /*
-Legit appends gershaim.
+@brief gets the path of the current executable
 
-@param my_str The null terminated string to append garshiaim to
+@return std::string representing the quoted path
 */
-void append_gershaim(CHAR* my_str) {
-	CHAR curr;
-	CHAR prev = my_str[0];
-	int i;
-	for (i = 1; my_str[i - 1] != '\0'; i++) {
-		curr = my_str[i];
-		my_str[i] = prev;
-		prev = curr;
+std::string getFilePath() {
+	CHAR myPath[MAX_PATH_SIZE];
+	LPSTR currentPath = myPath;
+	DWORD getModuleStatus = GetModuleFileNameA(NULL, currentPath, MAX_PATH_SIZE);
+	std::string newPath = myPath;
+	newPath = "\"" + newPath + "\"";
+
+	if (getModuleStatus == NULL) {
+		throw GetModuleException();
 	}
-	my_str[0] = '"';
-	my_str[i - 1] = '"';
-	my_str[i] = '\0';
+
+	return newPath;
 }
 
 
 /*
-Handles all error types
+@brief sets an autorun of the filepath
 
-@param errorCode Error code to take care of
-@return errorcode
+@param filePath std::string of the executable to be added tothe autorun
 */
-int handle_errors(error_code errorCode) {
-	switch (errorCode) {
-	case error_code::ALREADY_OPEN:
-		std::cerr << "Already open";
-		return errorCode;
+void setAutoRun(const std::string& filePath) {
+	HKEY targetKey;
+	LSTATUS openStat = RegOpenKeyA(HKEY_CURRENT_USER, AUTORUNS, &targetKey);
+	if (openStat != ERROR_SUCCESS) {
+		throw OpenRegistryException();
 	}
 
-	return error_code::UNKNOWN;
+	LSTATUS setStat = RegSetValueExA(targetKey, AUTORUN_VALUE_NAME, 0, REG_SZ, reinterpret_cast<const BYTE*>(filePath.c_str()), MAX_PATH_SIZE);
+	if (setStat != ERROR_SUCCESS) {
+		throw SetRegistryException();
+	}
 }
 
 
-int main()
-{
+/*
+@brief Closes the handles if they are still open
+*/
+void CleanupHandles() {
+	if (closeStatus == NULL) {
+		CloseHandle(g_hMutex);
+	}
+}
+
+
+int main(int argc, char* argv[]) {
 	try {
-	ghMutex = OpenMutexA(MUTEX_ALL_ACCESS, FALSE, MUTEXNAME);
-	if (ghMutex != NULL) {
-		throw error_code::ALREADY_OPEN;
-	}
-	ghMutex = CreateMutexA(
-		NULL,
-		TRUE,
-		MUTEXNAME);
+		createSingleMutex();
+		userMessageStage();
 
-	int msgboxID = ShowPopup();
+		std::string filePath = getFilePath();
+		setAutoRun(filePath);
 
-	HKEY TargetKey;
-	LSTATUS OpenStat = RegOpenKeyA(HKEY_CURRENT_USER, AUTORUNS, &TargetKey);
-	CHAR my_str[MAX_PATH_SIZE];
-	LPSTR CurrentPath = my_str; 
-	GetModuleFileNameA(NULL, CurrentPath, MAX_PATH_SIZE);
-	append_gershaim(my_str);
-	RegSetValueExA(TargetKey, TEXT(AUTORUN_VALUE_NAME), 0, REG_SZ, (BYTE*)my_str, MAX_PATH_SIZE);
-
+		Sleep(SECONDS_IN_HOUR * MILI_MULTIPLIER);
 
 	WSADATA wsaData;
 	int iResult;
@@ -183,23 +198,17 @@ int main()
 
 	Sleep(SECONDS_IN_HOUR * MILI_MULTIPLIER);
 
-	CloseHandle(ghMutex);
+		closeStatus = CloseHandle(g_hMutex);
 
-	return error_code::SUCCESS;
+		if (closeStatus == NULL) {
+			throw CloseMutexException();
+		}
+
+		return static_cast<int>(StatusCode::STATUS_SUCCESS);
 	}
-	catch (error_code errorCode) {
-		return handle_errors(errorCode);
-		
+	catch (const MyException& exception) {
+		CleanupHandles();
+		std::cerr << "An exception occurred (" << exception.getError() << std::endl;
+		return static_cast<int>(StatusCode::STATUS_ERROR);
 	}
-} 
-
-
-
-
-
-
-
-
-
-
-
+}

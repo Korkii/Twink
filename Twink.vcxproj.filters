@@ -18,5 +18,16 @@
     <ClCompile Include="twink\Twink.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="TwinkExceptions.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="MyException.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="TwinkExceptions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
