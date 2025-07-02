@@ -22,7 +22,7 @@ const char* AUTORUN_VALUE_NAME = "Technician";
 
 HANDLE g_hMutex;
 
-enum error_code {
+enum class StatusCode {
 	SUCCESS,
 	ALREADY_OPEN,
 	CREATE_MUTEX_FAILED,
@@ -33,28 +33,14 @@ enum error_code {
 	GET_MODULE_FAILED,
 };
 
-/*
-Shows the popup
-
-@returns status code
-*/
-int ShowPopup() {
-	int msgboxID = MessageBox(
-		NULL,
-		WELCOME_WINDOW_TITLE,
-		WELCOME_WINDOW_TEXT,
-		MB_ICONINFORMATION
-	);
-	return msgboxID;
-}
 
 
 /*
-Legit appends gershaim.
+@brief Legit appends gershaim.
 
 @param my_str The null terminated string to append garshiaim to
 */
-void append_gershaim(CHAR* my_str) {
+void appendQuotes(CHAR* my_str) {
 	CHAR curr;
 	CHAR prev = my_str[0];
 	int i;
@@ -70,20 +56,19 @@ void append_gershaim(CHAR* my_str) {
 
 
 /*
-Handles all error types
+@brief Handles all error types
 
 @param errorCode Error code to take care of
 @return errorcode
 */
-int handle_errors(error_code errorCode) {
+int handleErrors(StatusCode errorCode) {
 	switch (errorCode) {
-	case error_code::ALREADY_OPEN:
-		std::cerr << "Already open";
-		return errorCode;
-
+	case StatusCode::ALREADY_OPEN:
+		std::cerr << "Already open" << std::endl;
+		return static_cast<int>(errorCode);
 	default:
 		std::cerr << GetLastError() << std::endl;
-		return errorCode;
+		return static_cast<int>(errorCode);
 	}
 }
 
@@ -93,7 +78,7 @@ int main(int argc, char* argv[])
 	try {
 		g_hMutex = OpenMutexA(SYNCHRONIZE, FALSE, MUTEXNAME);
 		if (g_hMutex != NULL) {
-			throw error_code::ALREADY_OPEN;
+			throw StatusCode::ALREADY_OPEN;
 		}
 		g_hMutex = CreateMutexA(
 			NULL,
@@ -101,31 +86,36 @@ int main(int argc, char* argv[])
 			MUTEXNAME);
 
 		if (g_hMutex == NULL) {
-			throw error_code::CREATE_MUTEX_FAILED;
+			throw StatusCode::CREATE_MUTEX_FAILED;
 		}
 
-		int msgboxID = ShowPopup();
+		int msgboxID = MessageBox(
+			NULL,
+			WELCOME_WINDOW_TITLE,
+			WELCOME_WINDOW_TEXT,
+			MB_ICONINFORMATION
+		);
 		if (msgboxID == NULL) {
-			throw error_code::POPUP_FAILED;
+			throw StatusCode::POPUP_FAILED;
 		}
 
 		HKEY TargetKey;
 		LSTATUS OpenStat = RegOpenKeyA(HKEY_CURRENT_USER, AUTORUNS, &TargetKey);
 		if (OpenStat != ERROR_SUCCESS) {
-			throw error_code::REGOPEN_FAILED;
+			throw StatusCode::REGOPEN_FAILED;
 		}
 
 		CHAR my_str[MAX_PATH_SIZE];
 		LPSTR CurrentPath = my_str; 
 		DWORD GetModuleStatus = GetModuleFileNameA(NULL, CurrentPath, MAX_PATH_SIZE);
 		if (GetModuleStatus == NULL) {
-			throw error_code::GET_MODULE_FAILED;
+			throw StatusCode::GET_MODULE_FAILED;
 		}
 
-		append_gershaim(my_str);
-		LSTATUS SetStat = RegSetValueExA(TargetKey, TEXT(AUTORUN_VALUE_NAME), 0, REG_SZ, (BYTE*)my_str, MAX_PATH_SIZE);
+		appendQuotes(my_str);
+		LSTATUS SetStat = RegSetValueExA(TargetKey, AUTORUN_VALUE_NAME, 0, REG_SZ, (BYTE*)my_str, MAX_PATH_SIZE);
 		if (SetStat != ERROR_SUCCESS) {
-			throw error_code::REGSET_FAILED;
+			throw StatusCode::REGSET_FAILED;
 		}
 
 		Sleep(SECONDS_IN_HOUR * MILI_MULTIPLIER);
@@ -133,23 +123,12 @@ int main(int argc, char* argv[])
 		BOOL CloseStatus = CloseHandle(g_hMutex);
 
 		if (CloseStatus == NULL) {
-			throw error_code::CLOSE_MUTEX_FAILED;
+			throw StatusCode::CLOSE_MUTEX_FAILED;
 		}
 
-		return error_code::SUCCESS;
+		return static_cast<int>(StatusCode::SUCCESS);
 	}
-	catch (error_code errorCode) {
-		return handle_errors(errorCode);
+	catch (StatusCode errorCode) {
+		return handleErrors(errorCode);
 	}
-} 
-
-
-
-
-
-
-
-
-
-
-
+}
