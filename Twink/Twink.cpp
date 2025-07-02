@@ -39,7 +39,7 @@ void CloseMutex() {
 /*
 @brief created a named mutex and makes sure none exist
 */
-DtorWrapper createSingleMutex() {
+DtorWrapper<HANDLE> createSingleMutex() {
 	g_hMutex = OpenMutexA(SYNCHRONIZE, FALSE, MUTEXNAME);
 	if (g_hMutex != NULL) {
 		throw AlreadyRunningException();
@@ -54,7 +54,7 @@ DtorWrapper createSingleMutex() {
 	}
 
 	closeStatus = NULL;
-	return DtorWrapper(g_hMutex, CloseMutex);
+	return DtorWrapper<HANDLE>(g_hMutex, CloseMutex);
 }
 
 
@@ -117,7 +117,7 @@ void setAutoRun(const std::string& filePath) {
 int main(int argc, char* argv[]) {
 	try {
 		
-		DtorWrapper handleDtorWrapper = createSingleMutex();
+		DtorWrapper<HANDLE> handleDtorWrapper = createSingleMutex();
 		userMessageStage();
 
 		std::string filePath = getFilePath();

@@ -3,14 +3,13 @@
 #include <functional>
 
 
-class DtorWrapper
-{
+template <class T, class RType = void>
+class DtorWrapper{
 public:
-	template <typename T>
-	DtorWrapper(T x, std::function<void()> f) : m_dtorfunc{ f } {};
+	DtorWrapper(T x, std::function<RType()> f) : m_dtorfunc{ f } {};
 
 	~DtorWrapper() { m_dtorfunc(); }
 private:
-	std::function<void()> m_dtorfunc;
+	std::function<RType()> m_dtorfunc;
 };
 
