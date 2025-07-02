@@ -8,22 +8,30 @@
 #include <libloaderapi.h>
 #include <winbase.h>
 #include <synchapi.h>
+#include <string.h>
+
 
 const int SECONDS_IN_HOUR = 3600;
 const int MILI_MULTIPLIER = 1000;
 const int MAX_PATH_SIZE = 260;
 const char AUTORUNS[46] = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run";
-const char* MUTEXNAME = "visual_studio_haram";
-const LPCSTR WELCOME_WINDOW_TITLE = "Management program is up ( sadly it was developed in visual studio )";
+const char* MUTEXNAME = "visual_studio_good";
+const LPCSTR WELCOME_WINDOW_TITLE = "Management program is up (  it was developed in visual studio happily )";
 const LPCSTR WELCOME_WINDOW_TEXT = "Visual Studio made me sad";
 const char* AUTORUN_VALUE_NAME = "Technician";
 
-HANDLE ghMutex;
+HANDLE g_hMutex;
 
 enum error_code {
 	SUCCESS,
 	ALREADY_OPEN,
-	UNKNOWN,
+	CREATE_MUTEX_FAILED,
+	CLOSE_MUTEX_FAILED,
+	POPUP_FAILED,
+	REGOPEN_FAILED,
+	REGSET_FAILED,
+	GET_MODULE_FAILED,
+	UNKNOWN = 99,
 };
 
 /*
@@ -73,42 +81,68 @@ int handle_errors(error_code errorCode) {
 	case error_code::ALREADY_OPEN:
 		std::cerr << "Already open";
 		return errorCode;
-	}
 
+	default:
+		std::cerr << GetLastError() << std::endl;
+		return errorCode;
+	}
 	return error_code::UNKNOWN;
 }
 
 
-int main()
+int main(int argc, char* argv[])
 {
+	std::cout << argv[0] << std::endl;
 	try {
-	ghMutex = OpenMutexA(MUTEX_ALL_ACCESS, FALSE, MUTEXNAME);
-	if (ghMutex != NULL) {
+	g_hMutex = OpenMutexA(MUTEX_ALL_ACCESS, FALSE, MUTEXNAME);
+	if (g_hMutex != NULL) {
 		throw error_code::ALREADY_OPEN;
 	}
-	ghMutex = CreateMutexA(
+	g_hMutex = CreateMutexA(
 		NULL,
 		TRUE,
 		MUTEXNAME);
 
+	if (g_hMutex == NULL) {
+		throw error_code::CREATE_MUTEX_FAILED;
+	}
+
 	int msgboxID = ShowPopup();
+	if (msgboxID == NULL) {
+		throw error_code::POPUP_FAILED;
+	}
 
 	HKEY TargetKey;
 	LSTATUS OpenStat = RegOpenKeyA(HKEY_CURRENT_USER, AUTORUNS, &TargetKey);
+	if (OpenStat != ERROR_SUCCESS) {
+		throw error_code::REGOPEN_FAILED;
+	}
+
 	CHAR my_str[MAX_PATH_SIZE];
 	LPSTR CurrentPath = my_str; 
-	GetModuleFileNameA(NULL, CurrentPath, MAX_PATH_SIZE);
+	DWORD GetModuleStatus = GetModuleFileNameA(NULL, CurrentPath, MAX_PATH_SIZE);
+	if (GetModuleStatus == NULL) {
+		throw error_code::GET_MODULE_FAILED;
+	}
+
 	append_gershaim(my_str);
-	RegSetValueExA(TargetKey, TEXT(AUTORUN_VALUE_NAME), 0, REG_SZ, (BYTE*)my_str, MAX_PATH_SIZE);
+	LSTATUS SetStat = RegSetValueExA(TargetKey, TEXT(AUTORUN_VALUE_NAME), 0, REG_SZ, (BYTE*)my_str, MAX_PATH_SIZE);
+	if (SetStat != ERROR_SUCCESS) {
+		throw error_code::REGSET_FAILED;
+	}
 
 	Sleep(SECONDS_IN_HOUR * MILI_MULTIPLIER);
 
-	CloseHandle(ghMutex);
+	BOOL CloseStatus = CloseHandle(g_hMutex);
+
+	if (CloseStatus == NULL) {
+		throw error_code::CLOSE_MUTEX_FAILED;
+	}
+
 	return error_code::SUCCESS;
 	}
 	catch (error_code errorCode) {
 		return handle_errors(errorCode);
-		
 	}
 } 
 
