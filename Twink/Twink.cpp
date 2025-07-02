@@ -2,6 +2,8 @@
 #include <windows.h>
 #include <winuser.h>
 #include "TwinkExceptions.h"
+#include <mutex>
+#include <DtorWrapper.h>
 
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -30,9 +32,21 @@ enum class StatusCode {
 
 
 /*
+@brief Destoys the mutex!
+*/
+void CloseMutex() {
+	closeStatus = CloseHandle(g_hMutex);
+	std::cout << "Legit destoryed it" << std::endl;
+	if (closeStatus == NULL) {
+		throw CloseMutexException();
+	}
+}
+
+
+/*
 @brief created a named mutex and makes sure none exist
 */
-void createSingleMutex() {
+DtorWrapper createSingleMutex() {
 	g_hMutex = OpenMutexA(SYNCHRONIZE, FALSE, MUTEXNAME);
 	if (g_hMutex != NULL) {
 		throw AlreadyRunningException();
@@ -47,6 +61,7 @@ void createSingleMutex() {
 	}
 
 	closeStatus = NULL;
+	return DtorWrapper(g_hMutex, CloseMutex);
 }
 
 
@@ -105,19 +120,11 @@ void setAutoRun(const std::string& filePath) {
 }
 
 
-/*
-@brief Closes the handles if they are still open
-*/
-void CleanupHandles() {
-	if (closeStatus == NULL) {
-		CloseHandle(g_hMutex);
-	}
-}
-
 
 int main(int argc, char* argv[]) {
 	try {
-		createSingleMutex();
+		
+		DtorWrapper handleDtorWrapper = createSingleMutex();
 		userMessageStage();
 
 		std::string filePath = getFilePath();
@@ -205,7 +212,6 @@ int main(int argc, char* argv[]) {
 		return static_cast<int>(StatusCode::STATUS_SUCCESS);
 	}
 	catch (const MyException& exception) {
-		CleanupHandles();
 		std::cerr << "An exception occurred (" << exception.getError() << std::endl;
 		return static_cast<int>(StatusCode::STATUS_ERROR);
 	}

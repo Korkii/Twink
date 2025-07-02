@@ -118,10 +118,12 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="DtorWrapper.cpp" />
     <ClCompile Include="TwinkExceptions.cpp" />
     <ClCompile Include="twink\Twink.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="DtorWrapper.h" />
     <ClInclude Include="MyException.h" />
     <ClInclude Include="TwinkExceptions.h" />
   </ItemGroup>
