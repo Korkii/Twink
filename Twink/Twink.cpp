@@ -2,6 +2,7 @@
 #include <windows.h>
 #include <winuser.h>
 #include "TwinkExceptions.h"
+#include <mutex>
 
 
 const int SECONDS_IN_HOUR = 3600;
@@ -97,20 +98,18 @@ void setAutoRun(const std::string& filePath) {
 	}
 }
 
+void CloseMutex() {
+	closeStatus = CloseHandle(g_hMutex);
 
-/*
-@brief Closes the handles if they are still open
-*/
-void CleanupHandles() {
 	if (closeStatus == NULL) {
-		CloseHandle(g_hMutex);
+		throw CloseMutexException();
 	}
 }
-
 
 int main(int argc, char* argv[]) {
 	try {
 		createSingleMutex();
+		const std::lock_guard<HANDLE> CloseMutex(g_hMutex);
 		userMessageStage();
 
 		std::string filePath = getFilePath();
@@ -118,16 +117,9 @@ int main(int argc, char* argv[]) {
 
 		Sleep(SECONDS_IN_HOUR * MILI_MULTIPLIER);
 
-		closeStatus = CloseHandle(g_hMutex);
-
-		if (closeStatus == NULL) {
-			throw CloseMutexException();
-		}
-
 		return static_cast<int>(StatusCode::STATUS_SUCCESS);
 	}
 	catch (const MyException& exception) {
-		CleanupHandles();
 		std::cerr << "An exception occurred (" << exception.getError() << std::endl;
 		return static_cast<int>(StatusCode::STATUS_ERROR);
 	}
