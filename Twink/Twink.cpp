@@ -34,27 +34,6 @@ enum class StatusCode {
 };
 
 
-
-/*
-@brief Legit appends gershaim.
-
-@param my_str The null terminated string to append garshiaim to
-*/
-void appendQuotes(CHAR* my_str) {
-	CHAR curr;
-	CHAR prev = my_str[0];
-	int i;
-	for (i = 1; my_str[i - 1] != '\0'; i++) {
-		curr = my_str[i];
-		my_str[i] = prev;
-		prev = curr;
-	}
-	my_str[0] = '"';
-	my_str[i - 1] = '"';
-	my_str[i] = '\0';
-}
-
-
 /*
 @brief Handles all error types
 
