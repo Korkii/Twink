@@ -31,7 +31,6 @@ enum error_code {
 	REGOPEN_FAILED,
 	REGSET_FAILED,
 	GET_MODULE_FAILED,
-	UNKNOWN = 99,
 };
 
 /*
@@ -86,60 +85,58 @@ int handle_errors(error_code errorCode) {
 		std::cerr << GetLastError() << std::endl;
 		return errorCode;
 	}
-	return error_code::UNKNOWN;
 }
 
 
 int main(int argc, char* argv[])
 {
-	std::cout << argv[0] << std::endl;
 	try {
-	g_hMutex = OpenMutexA(MUTEX_ALL_ACCESS, FALSE, MUTEXNAME);
-	if (g_hMutex != NULL) {
-		throw error_code::ALREADY_OPEN;
-	}
-	g_hMutex = CreateMutexA(
-		NULL,
-		TRUE,
-		MUTEXNAME);
+		g_hMutex = OpenMutexA(SYNCHRONIZE, FALSE, MUTEXNAME);
+		if (g_hMutex != NULL) {
+			throw error_code::ALREADY_OPEN;
+		}
+		g_hMutex = CreateMutexA(
+			NULL,
+			TRUE,
+			MUTEXNAME);
 
-	if (g_hMutex == NULL) {
-		throw error_code::CREATE_MUTEX_FAILED;
-	}
+		if (g_hMutex == NULL) {
+			throw error_code::CREATE_MUTEX_FAILED;
+		}
 
-	int msgboxID = ShowPopup();
-	if (msgboxID == NULL) {
-		throw error_code::POPUP_FAILED;
-	}
+		int msgboxID = ShowPopup();
+		if (msgboxID == NULL) {
+			throw error_code::POPUP_FAILED;
+		}
 
-	HKEY TargetKey;
-	LSTATUS OpenStat = RegOpenKeyA(HKEY_CURRENT_USER, AUTORUNS, &TargetKey);
-	if (OpenStat != ERROR_SUCCESS) {
-		throw error_code::REGOPEN_FAILED;
-	}
+		HKEY TargetKey;
+		LSTATUS OpenStat = RegOpenKeyA(HKEY_CURRENT_USER, AUTORUNS, &TargetKey);
+		if (OpenStat != ERROR_SUCCESS) {
+			throw error_code::REGOPEN_FAILED;
+		}
 
-	CHAR my_str[MAX_PATH_SIZE];
-	LPSTR CurrentPath = my_str; 
-	DWORD GetModuleStatus = GetModuleFileNameA(NULL, CurrentPath, MAX_PATH_SIZE);
-	if (GetModuleStatus == NULL) {
-		throw error_code::GET_MODULE_FAILED;
-	}
+		CHAR my_str[MAX_PATH_SIZE];
+		LPSTR CurrentPath = my_str; 
+		DWORD GetModuleStatus = GetModuleFileNameA(NULL, CurrentPath, MAX_PATH_SIZE);
+		if (GetModuleStatus == NULL) {
+			throw error_code::GET_MODULE_FAILED;
+		}
 
-	append_gershaim(my_str);
-	LSTATUS SetStat = RegSetValueExA(TargetKey, TEXT(AUTORUN_VALUE_NAME), 0, REG_SZ, (BYTE*)my_str, MAX_PATH_SIZE);
-	if (SetStat != ERROR_SUCCESS) {
-		throw error_code::REGSET_FAILED;
-	}
+		append_gershaim(my_str);
+		LSTATUS SetStat = RegSetValueExA(TargetKey, TEXT(AUTORUN_VALUE_NAME), 0, REG_SZ, (BYTE*)my_str, MAX_PATH_SIZE);
+		if (SetStat != ERROR_SUCCESS) {
+			throw error_code::REGSET_FAILED;
+		}
 
-	Sleep(SECONDS_IN_HOUR * MILI_MULTIPLIER);
+		Sleep(SECONDS_IN_HOUR * MILI_MULTIPLIER);
 
-	BOOL CloseStatus = CloseHandle(g_hMutex);
+		BOOL CloseStatus = CloseHandle(g_hMutex);
 
-	if (CloseStatus == NULL) {
-		throw error_code::CLOSE_MUTEX_FAILED;
-	}
+		if (CloseStatus == NULL) {
+			throw error_code::CLOSE_MUTEX_FAILED;
+		}
 
-	return error_code::SUCCESS;
+		return error_code::SUCCESS;
 	}
 	catch (error_code errorCode) {
 		return handle_errors(errorCode);
