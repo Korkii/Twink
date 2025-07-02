@@ -29,7 +29,7 @@ enum class StatusCode {
 
 
 
-void createMutexStage() {
+void createSingleMutex() {
 	g_hMutex = OpenMutexA(SYNCHRONIZE, FALSE, MUTEXNAME);
 	if (g_hMutex != NULL) {
 		throw AlreadyRunningException();
@@ -57,35 +57,35 @@ void userMessageStage() {
 }
 
 std::string getFilePath() {
-	CHAR my_str[MAX_PATH_SIZE];
-	LPSTR CurrentPath = my_str;
-	DWORD GetModuleStatus = GetModuleFileNameA(NULL, CurrentPath, MAX_PATH_SIZE);
-	std::string new_str = my_str;
-	new_str = "\"" + new_str + "\"";
+	CHAR myPath[MAX_PATH_SIZE];
+	LPSTR currentPath = myPath;
+	DWORD getModuleStatus = GetModuleFileNameA(NULL, currentPath, MAX_PATH_SIZE);
+	std::string newPath = myPath;
+	newPath = "\"" + newPath + "\"";
 
-	if (GetModuleStatus == NULL) {
+	if (getModuleStatus == NULL) {
 		throw GetModuleException();
 	}
 
-	return new_str;
+	return newPath;
 }
 
 void SetAutoRun(std::string filePath) {
-	HKEY TargetKey;
-	LSTATUS OpenStat = RegOpenKeyA(HKEY_CURRENT_USER, AUTORUNS, &TargetKey);
-	if (OpenStat != ERROR_SUCCESS) {
+	HKEY targetKey;
+	LSTATUS openStat = RegOpenKeyA(HKEY_CURRENT_USER, AUTORUNS, &targetKey);
+	if (openStat != ERROR_SUCCESS) {
 		throw OpenRegistryException();
 	}
 
-	LSTATUS SetStat = RegSetValueExA(TargetKey, AUTORUN_VALUE_NAME, 0, REG_SZ, (BYTE*)filePath.c_str(), MAX_PATH_SIZE);
-	if (SetStat != ERROR_SUCCESS) {
+	LSTATUS setStat = RegSetValueExA(targetKey, AUTORUN_VALUE_NAME, 0, REG_SZ, reinterpret_cast<const BYTE*>(filePath.c_str()), MAX_PATH_SIZE);
+	if (setStat != ERROR_SUCCESS) {
 		throw SetRegistryException();
 	}
 }
 
 int main(int argc, char* argv[]) {
 	try {
-		createMutexStage();
+		createSingleMutex();
 		userMessageStage();
 
 		std::string filePath = getFilePath();
@@ -93,16 +93,16 @@ int main(int argc, char* argv[]) {
 
 		Sleep(SECONDS_IN_HOUR * MILI_MULTIPLIER);
 
-		BOOL CloseStatus = CloseHandle(g_hMutex);
+		BOOL closeStatus = CloseHandle(g_hMutex);
 
-		if (CloseStatus == NULL) {
+		if (closeStatus == NULL) {
 			throw CloseMutexException();
 		}
 
 		return static_cast<int>(StatusCode::STATUS_SUCCESS);
 	}
 	catch (MyException exception) {
-		std::cerr << "An exception occurred (" << exception.getError() << ")\n";
+		std::cerr << "An exception occurred (" << exception.getError() << std::endl;
 		return static_cast<int>(StatusCode::STATUS_ERROR);
 	}
 }

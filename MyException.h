@@ -1,16 +1,15 @@
 #pragma once
-#include <iostream>
+
 #include <string>
 
 
-class MyException
-{
-private:
-	std::string m_error;
+class MyException {
 public:
-	MyException(std::string error)
+	MyException(const std::string& error)
 		: m_error{ error }
 	{
 	}
 	const std::string& getError() const { return m_error; }
+private:
+	std::string m_error;
 };
