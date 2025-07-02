@@ -3,6 +3,7 @@
 #include <winuser.h>
 #include "TwinkExceptions.h"
 #include <mutex>
+#include <DtorWrapper.h>
 
 
 const int SECONDS_IN_HOUR = 3600;
@@ -24,9 +25,21 @@ enum class StatusCode {
 
 
 /*
+@brief Destoys the mutex!
+*/
+void CloseMutex() {
+	closeStatus = CloseHandle(g_hMutex);
+	std::cout << "Legit destoryed it" << std::endl;
+	if (closeStatus == NULL) {
+		throw CloseMutexException();
+	}
+}
+
+
+/*
 @brief created a named mutex and makes sure none exist
 */
-void createSingleMutex() {
+DtorWrapper createSingleMutex() {
 	g_hMutex = OpenMutexA(SYNCHRONIZE, FALSE, MUTEXNAME);
 	if (g_hMutex != NULL) {
 		throw AlreadyRunningException();
@@ -41,6 +54,7 @@ void createSingleMutex() {
 	}
 
 	closeStatus = NULL;
+	return DtorWrapper(g_hMutex, CloseMutex);
 }
 
 
@@ -98,18 +112,11 @@ void setAutoRun(const std::string& filePath) {
 	}
 }
 
-void CloseMutex() {
-	closeStatus = CloseHandle(g_hMutex);
-
-	if (closeStatus == NULL) {
-		throw CloseMutexException();
-	}
-}
 
 int main(int argc, char* argv[]) {
 	try {
-		createSingleMutex();
-		const std::lock_guard<HANDLE> CloseMutex(g_hMutex);
+		
+		DtorWrapper handleDtorWrapper = createSingleMutex();
 		userMessageStage();
 
 		std::string filePath = getFilePath();
