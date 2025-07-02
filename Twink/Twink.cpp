@@ -1,7 +1,8 @@
 #include <iostream>
 #include <windows.h>
 #include <winuser.h>
-#include "Twink.h"
+#include "TwinkExceptions.h"
+
 
 const int SECONDS_IN_HOUR = 3600;
 const int MILI_MULTIPLIER = 1000;
@@ -13,14 +14,7 @@ LPCSTR WELCOME_WINDOW_TEXT = "Visual Studio made me sad";
 const char* AUTORUN_VALUE_NAME = "Technician";
 
 HANDLE g_hMutex;
-
-AlreadyRunningException::AlreadyRunningException() : MyException{ "Already running" } {};
-CreateMutexException::CreateMutexException() : MyException{ "Create Mutex" } {};
-CloseMutexException::CloseMutexException() : MyException{ "Close Mutex" } {};
-PopupException::PopupException() : MyException{ "Popup" } {};
-OpenRegistryException::OpenRegistryException() : MyException{ "Open Registry" } {};
-SetRegistryException::SetRegistryException() : MyException{ "Set Registry" } {};
-GetModuleException::GetModuleException() : MyException{ "Get Module" } {};
+BOOL closeStatus;
 
 enum class StatusCode {
 	STATUS_SUCCESS,
@@ -44,6 +38,8 @@ void createSingleMutex() {
 	if (g_hMutex == NULL) {
 		throw CreateMutexException();
 	}
+
+	closeStatus = NULL;
 }
 
 
@@ -88,7 +84,7 @@ std::string getFilePath() {
 
 @param filePath std::string of the executable to be added tothe autorun
 */
-void SetAutoRun(std::string filePath) {
+void setAutoRun(const std::string& filePath) {
 	HKEY targetKey;
 	LSTATUS openStat = RegOpenKeyA(HKEY_CURRENT_USER, AUTORUNS, &targetKey);
 	if (openStat != ERROR_SUCCESS) {
@@ -101,17 +97,28 @@ void SetAutoRun(std::string filePath) {
 	}
 }
 
+
+/*
+@brief Closes the handles if they are still open
+*/
+void CleanupHandles() {
+	if (closeStatus == NULL) {
+		CloseHandle(g_hMutex);
+	}
+}
+
+
 int main(int argc, char* argv[]) {
 	try {
 		createSingleMutex();
 		userMessageStage();
 
 		std::string filePath = getFilePath();
-		SetAutoRun(filePath);
+		setAutoRun(filePath);
 
 		Sleep(SECONDS_IN_HOUR * MILI_MULTIPLIER);
 
-		BOOL closeStatus = CloseHandle(g_hMutex);
+		closeStatus = CloseHandle(g_hMutex);
 
 		if (closeStatus == NULL) {
 			throw CloseMutexException();
@@ -119,7 +126,8 @@ int main(int argc, char* argv[]) {
 
 		return static_cast<int>(StatusCode::STATUS_SUCCESS);
 	}
-	catch (MyException exception) {
+	catch (const MyException& exception) {
+		CleanupHandles();
 		std::cerr << "An exception occurred (" << exception.getError() << std::endl;
 		return static_cast<int>(StatusCode::STATUS_ERROR);
 	}

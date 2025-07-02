@@ -118,11 +118,12 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="TwinkExceptions.cpp" />
     <ClCompile Include="twink\Twink.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MyException.h" />
-    <ClInclude Include="Twink.h" />
+    <ClInclude Include="TwinkExceptions.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
